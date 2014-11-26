@@ -178,6 +178,7 @@ void get_coordinates();
 void calculate_delta(float cartesian[3]);
 extern float delta[3];
 #endif
+void prepare_move_raw();
 void prepare_move();
 void kill();
 void Stop();
