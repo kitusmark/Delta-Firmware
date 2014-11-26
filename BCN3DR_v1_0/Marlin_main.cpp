@@ -471,6 +471,7 @@ void servo_init()
 void setup()
 {
   setup_killpin();
+  setup_pausepin(); // Setup for the PAUSE_PIN input. Out of filament
   setup_powerhold();
   MYSERIAL.begin(BAUDRATE);
   SERIAL_PROTOCOLLNPGM("start");
@@ -3472,6 +3473,12 @@ void manage_inactivity()
     if( 0 == READ(KILL_PIN) )
       kill();
   #endif
+	//OUT OF Filament detection
+  #if defined(PAUSE_PIN) && PAUSE_PIN > -1
+	if( 0 == READ(PAUSE_PIN) )
+		pause();
+   #endif
+	
   #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
     controllerFan(); //Check if fan should be turned on to cool stepper drivers down
   #endif
@@ -3646,3 +3653,18 @@ bool setTargetedHotend(int code){
   return false;
 }
 
+// Functions implementing Out of filament detection
+void setup_pausepin() {
+	#if defined(PAUSE_PIN) && PAUSE_PIN > -1
+	pinMode(PAUSE_PIN, INPUT);
+	WRITE(PAUSE_PIN, HIGH);
+	#endif
+}
+
+void pause() {
+	enquecommand("M600");
+	enquecommand("G4 P0");
+	enquecommand("G4 P0");
+	enquecommand("G4 P0");
+	
+}

@@ -522,7 +522,7 @@
 
     #define BEEPER             33
 
-  #else
+  #else //Ramps v1.4 Standard Configuration Pinout
 
     #define X_STEP_PIN         54
     #define X_DIR_PIN          55
@@ -557,6 +557,8 @@
     #define E1_STEP_PIN        36
     #define E1_DIR_PIN         34
     #define E1_ENABLE_PIN      30
+
+	#define PAUSE_PIN 		   18 // Out of filament detection through endstop switch
 
     #if MOTHERBOARD == 68
       #define E2_STEP_PIN        23

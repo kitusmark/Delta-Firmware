@@ -180,6 +180,7 @@ extern float delta[3];
 #endif
 void prepare_move();
 void kill();
+void pause(); // Out of filament function. Triggers M600
 void Stop();
 
 bool IsStopped();
