@@ -3475,7 +3475,7 @@ void manage_inactivity()
   #endif
 	//OUT OF Filament detection
   #if defined(PAUSE_PIN) && PAUSE_PIN > -1
-	if( 0 == READ(PAUSE_PIN) )
+	if( 1 == READ(PAUSE_PIN) && card.sdprinting)
 		pause();
    #endif
 	

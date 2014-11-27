@@ -181,6 +181,7 @@ extern float delta[3];
 void prepare_move();
 void kill();
 void pause(); // Out of filament function. Triggers M600
+void setup_pausepin();
 void Stop();
 
 bool IsStopped();
