@@ -286,6 +286,9 @@ static bool home_all_axis = true;
 static float feedrate = 1500.0, next_feedrate, saved_feedrate;
 static long gcode_N, gcode_LastN, Stopped_gcode_LastN = 0;
 
+//Filament Control
+bool filamentControl = true;
+
 static bool relative_mode = false;  //Determines Absolute or Relative Coordinates
 
 static char cmdbuffer[BUFSIZE][MAX_CMD_SIZE];
@@ -2783,79 +2786,103 @@ void process_commands()
     #ifdef FILAMENTCHANGEENABLE
     case 600: //Pause for filament change X[pos] Y[pos] Z[relative lift] E[initial retract] L[later retract distance for removal]
     {
+		
         float target[4];
         float lastpos[4];
-        target[X_AXIS]=current_position[X_AXIS];
-        target[Y_AXIS]=current_position[Y_AXIS];
-        target[Z_AXIS]=current_position[Z_AXIS];
-        target[E_AXIS]=current_position[E_AXIS];
-        lastpos[X_AXIS]=current_position[X_AXIS];
-        lastpos[Y_AXIS]=current_position[Y_AXIS];
-        lastpos[Z_AXIS]=current_position[Z_AXIS];
-        lastpos[E_AXIS]=current_position[E_AXIS];
-        //retract by E
-        if(code_seen('E'))
-        {
-          target[E_AXIS]+= code_value();
-        }
-        else
-        {
-          #ifdef FILAMENTCHANGE_FIRSTRETRACT
-            target[E_AXIS]+= FILAMENTCHANGE_FIRSTRETRACT ;
-          #endif
-        }
-        plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
+       
+        #ifdef DELTA
+			calculate_delta(current_position);
+			target[X_AXIS]=delta[X_AXIS];
+			target[Y_AXIS]=delta[Y_AXIS];
+			target[Z_AXIS]=delta[Z_AXIS];
+			target[E_AXIS]=delta[E_AXIS];
+			lastpos[X_AXIS]=delta[X_AXIS];
+			lastpos[Y_AXIS]=delta[Y_AXIS];
+			lastpos[Z_AXIS]=delta[Z_AXIS];
+			lastpos[E_AXIS]=delta[E_AXIS];
+			// Move all carriages up together until the first endstop is hit.
+			current_position[X_AXIS] = MANUAL_X_HOME_POS;
+			current_position[Y_AXIS] = MANUAL_Y_HOME_POS;
+			current_position[Z_AXIS] = MANUAL_Z_HOME_POS;
+			
+			calculate_delta(current_position); // Calculate Delta for Homing		
+			plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], 0 ,feedrate/20, active_extruder);			
+			plan_buffer_line(delta[X_AXIS], delta[Y_AXIS], delta[Z_AXIS], -100, feedrate/20, active_extruder);
+			
+		//retract by E
+		#else
+			target[X_AXIS]=current_position[X_AXIS];
+			target[Y_AXIS]=current_position[Y_AXIS];
+			target[Z_AXIS]=current_position[Z_AXIS];
+			target[E_AXIS]=current_position[E_AXIS];
+			lastpos[X_AXIS]=current_position[X_AXIS];
+			lastpos[Y_AXIS]=current_position[Y_AXIS];
+			lastpos[Z_AXIS]=current_position[Z_AXIS];
+			lastpos[E_AXIS]=current_position[E_AXIS];
+			if(code_seen('E'))
+			{
+			  target[E_AXIS]+= code_value();
+			}
+			else
+			{
+			  #ifdef FILAMENTCHANGE_FIRSTRETRACT
+				target[E_AXIS]+= FILAMENTCHANGE_FIRSTRETRACT ;
+			  #endif
+			}
+			plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
 
-        //lift Z
-        if(code_seen('Z'))
-        {
-          target[Z_AXIS]+= code_value();
-        }
-        else
-        {
-          #ifdef FILAMENTCHANGE_ZADD
-            target[Z_AXIS]+= FILAMENTCHANGE_ZADD ;
-          #endif
-        }
-        plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
+			//lift Z
+			if(code_seen('Z'))
+			{
+			  target[Z_AXIS]+= code_value();
+			}
+			else
+			{
+			  #ifdef FILAMENTCHANGE_ZADD
+				target[Z_AXIS]+= FILAMENTCHANGE_ZADD ;
+			  #endif
+			}
+			plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
 
-        //move xy
-        if(code_seen('X'))
-        {
-          target[X_AXIS]+= code_value();
-        }
-        else
-        {
-          #ifdef FILAMENTCHANGE_XPOS
-            target[X_AXIS]= FILAMENTCHANGE_XPOS ;
-          #endif
-        }
-        if(code_seen('Y'))
-        {
-          target[Y_AXIS]= code_value();
-        }
-        else
-        {
-          #ifdef FILAMENTCHANGE_YPOS
-            target[Y_AXIS]= FILAMENTCHANGE_YPOS ;
-          #endif
-        }
+			//move xy
+			if(code_seen('X'))
+			{
+			  target[X_AXIS]+= code_value();
+			}
+			else
+			{
+			  #ifdef FILAMENTCHANGE_XPOS
+				target[X_AXIS]= FILAMENTCHANGE_XPOS ;
+			  #endif
+			}
+			if(code_seen('Y'))
+			{
+			  target[Y_AXIS]= code_value();
+			}
+			else
+			{
+			  #ifdef FILAMENTCHANGE_YPOS
+				target[Y_AXIS]= FILAMENTCHANGE_YPOS ;
+			  #endif
+			}
 
-        plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
+			plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
 
-        if(code_seen('L'))
-        {
-          target[E_AXIS]+= code_value();
-        }
-        else
-        {
-          #ifdef FILAMENTCHANGE_FINALRETRACT
-            target[E_AXIS]+= FILAMENTCHANGE_FINALRETRACT ;
-          #endif
-        }
+			if(code_seen('L'))
+			{
+			  target[E_AXIS]+= code_value();
+			}
+			else
+			{
+			  #ifdef FILAMENTCHANGE_FINALRETRACT
+				target[E_AXIS]+= FILAMENTCHANGE_FINALRETRACT ;
+			  #endif
+			}
 
-        plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);
-
+			plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder);	
+			}
+		#endif // Non Delta Printers
+		
         //finish moves
         st_synchronize();
         //disable extruder steppers so filament can be removed
@@ -2874,11 +2901,10 @@ void process_commands()
           {
           #if BEEPER > 0
             SET_OUTPUT(BEEPER);
-
             WRITE(BEEPER,HIGH);
-            delay(3);
+            delay(5);
             WRITE(BEEPER,LOW);
-            delay(3);
+            delay(5);
           #else
 			#if !defined(LCD_FEEDBACK_FREQUENCY_HZ) || !defined(LCD_FEEDBACK_FREQUENCY_DURATION_MS)
               lcd_buzz(1000/6,100);
@@ -2900,13 +2926,16 @@ void process_commands()
             target[E_AXIS]+=(-1)*FILAMENTCHANGE_FINALRETRACT ;
           #endif
         }
-        current_position[E_AXIS]=target[E_AXIS]; //the long retract of L is compensated by manual filament feeding
-        plan_set_e_position(current_position[E_AXIS]);
-        plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //should do nothing
-        plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //move xy back
-        plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //move z back
-        plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], lastpos[E_AXIS], feedrate/60, active_extruder); //final untretract
-    }
+        //current_position[E_AXIS]=target[E_AXIS]; //the long retract of L is compensated by manual filament feeding
+        //plan_set_e_position(current_position[E_AXIS]);
+        //plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //should do nothing
+        plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS], feedrate/20, active_extruder); //move xy back
+        //plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], target[E_AXIS], feedrate/60, active_extruder); //move z back
+        plan_buffer_line(lastpos[X_AXIS], lastpos[Y_AXIS], lastpos[Z_AXIS], lastpos[E_AXIS], feedrate/20, active_extruder); //final untretract
+		
+		//enable filament control again
+		filamentControl=true;
+	}
     break;
     #endif //FILAMENTCHANGEENABLE
     #ifdef DUAL_X_CARRIAGE
@@ -3473,10 +3502,16 @@ void manage_inactivity()
     if( 0 == READ(KILL_PIN) )
       kill();
   #endif
+  
 	//OUT OF Filament detection
   #if defined(PAUSE_PIN) && PAUSE_PIN > -1
 	if( 1 == READ(PAUSE_PIN) && card.sdprinting)
+	if (filamentControl){	
 		pause();
+		filamentControl=false;
+	}
+	
+
    #endif
 	
   #if defined(CONTROLLERFAN_PIN) && CONTROLLERFAN_PIN > -1
@@ -3662,9 +3697,8 @@ void setup_pausepin() {
 }
 
 void pause() {
-	enquecommand("M600");
-	enquecommand("G4 P0");
-	enquecommand("G4 P0");
-	enquecommand("G4 P0");
-	
-}
+		enquecommand("M600");
+		enquecommand("G4 P0");
+		enquecommand("G4 P0");
+		enquecommand("G4 P0");
+	}
